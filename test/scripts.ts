@@ -30,7 +30,9 @@ export type ProjectType =
   | 'typescript'
   | 'javascript'
   | 'yoshi-server-javascript'
-  | 'yoshi-server-typescript';
+  | 'yoshi-server-typescript'
+  | 'monorepo-javascript'
+  | 'monorepo-typescript';
 
 type ScriptOpts = {
   args?: Array<string>;
@@ -45,8 +47,15 @@ export default class Scripts {
   public readonly serverUrl: string;
   private readonly yoshiPublishDir: string;
   public readonly staticsServerUrl: string;
+  private readonly isMonorepo: boolean;
 
-  constructor({ testDirectory }: { testDirectory: string }) {
+  constructor({
+    testDirectory,
+    isMonorepo,
+  }: {
+    testDirectory: string;
+    isMonorepo: boolean;
+  }) {
     this.verbose = !!process.env.DEBUG;
     this.testDirectory = testDirectory;
     this.serverProcessPort = 3000;
@@ -56,6 +65,7 @@ export default class Scripts {
     this.yoshiPublishDir = isPublish
       ? `${global.yoshiPublishDir}/node_modules`
       : path.join(__dirname, '../packages/yoshi-flow-legacy/node_modules');
+    this.isMonorepo = isMonorepo;
   }
 
   static setupProjectFromTemplate({
@@ -102,26 +112,35 @@ export default class Scripts {
       );
     }
 
-    return new Scripts({ testDirectory: featureDir });
+    // If this is a monorepo, run `yarn install` to symlink local modules
+    const isMonorepo =
+      projectType === 'monorepo-javascript' ||
+      projectType === 'monorepo-typescript';
+
+    if (isMonorepo) {
+      execa.sync('yarn', [], { cwd: featureDir, stdio: 'inherit' });
+    }
+
+    return new Scripts({ testDirectory: featureDir, isMonorepo });
   }
 
   async dev(callback: TestCallback = async () => {}, opts: ScriptOpts = {}) {
     let startProcessOutput: string = '';
 
-    const startProcess = execa(
-      'node',
-      [yoshiBin, 'start', ...(opts.args || [])],
-      {
-        cwd: this.testDirectory,
-        env: {
-          PORT: `${this.serverProcessPort}`,
-          NODE_PATH: this.yoshiPublishDir,
-          ...defaultOptions,
-          ...localEnv,
-          ...opts.env,
-        },
+    const args = this.isMonorepo
+      ? [yoshiBin, 'start', 'monorepo-app']
+      : [yoshiBin, 'start'];
+
+    const startProcess = execa('node', [...args, ...(opts.args || [])], {
+      cwd: this.testDirectory,
+      env: {
+        PORT: `${this.serverProcessPort}`,
+        NODE_PATH: this.yoshiPublishDir,
+        ...defaultOptions,
+        ...localEnv,
+        ...opts.env,
       },
-    );
+    });
 
     startProcess.stdout &&
       startProcess.stdout.on('data', buffer => {
@@ -289,20 +308,32 @@ export default class Scripts {
 
     const staticsServerProcess = execa(
       'npx',
-      ['serve', '-p', `${this.staticsServerPort}`, '-s', 'dist/statics/'],
+      [
+        'serve',
+        '-p',
+        `${this.staticsServerPort}`,
+        '-s',
+        ...(this.isMonorepo
+          ? ['packages/app/dist/statics']
+          : ['dist/statics/']),
+      ],
       {
         cwd: this.testDirectory,
       },
     );
 
-    const appServerProcess = execa('node', ['./index.js'], {
-      cwd: this.testDirectory,
-      stdio: !this.verbose ? 'pipe' : 'inherit',
-      env: {
-        NODE_PATH: this.yoshiPublishDir,
-        PORT: `${this.serverProcessPort}`,
+    const appServerProcess = execa(
+      'node',
+      this.isMonorepo ? ['./packages/app/index.js'] : ['./index.js'],
+      {
+        cwd: this.testDirectory,
+        stdio: !this.verbose ? 'pipe' : 'inherit',
+        env: {
+          NODE_PATH: this.yoshiPublishDir,
+          PORT: `${this.serverProcessPort}`,
+        },
       },
-    });
+    );
 
     await Promise.all([
       waitForPort(this.staticsServerPort),
