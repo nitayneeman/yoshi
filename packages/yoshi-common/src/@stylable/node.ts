@@ -4,19 +4,27 @@ import {
   getYoshiStylableDependenciesDir,
 } from './utils';
 
-function getStylableNode() {
+function getStylableModuleFactory() {
   if (isStylableDependencies()) {
     // @ts-ignore
     return importFrom(
       getYoshiStylableDependenciesDir(),
       '@stylable/module-utils',
-    );
+    ).stylableModuleFactory;
   }
 
-  return require('@stylable/node');
+  return require('@stylable/node').stylableModuleFactory;
 }
 
-const stylableNode = getStylableNode();
+function getStylableNamespaceFactory() {
+  if (isStylableDependencies()) {
+    // @ts-ignore
+    return importFrom(getYoshiStylableDependenciesDir(), '@stylable/node')
+      .stylableModuleFactory;
+  }
 
-export const stylableModuleFactory = stylableNode.stylableModuleFactory;
-export const resolveNamespaceFactory = stylableNode.resolveNamespaceFactory;
+  return require('@stylable/node').stylableModuleFactory;
+}
+
+export const stylableModuleFactory = getStylableModuleFactory();
+export const resolveNamespaceFactory = getStylableNamespaceFactory();
