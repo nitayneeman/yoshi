@@ -1,10 +1,13 @@
 import importFrom from 'import-from';
-import { isStylableDependencies } from './utils';
+import {
+  isStylableDependencies,
+  getYoshiStylableDependenciesDir,
+} from './utils';
 
 function getStylableJest() {
   if (isStylableDependencies()) {
     // @ts-ignore
-    return importFrom('@stylable/jest', 'yoshi-stylable-dependencies');
+    return importFrom(getYoshiStylableDependenciesDir(), '@stylable/jest');
   }
 
   return require('@stylable/jest');

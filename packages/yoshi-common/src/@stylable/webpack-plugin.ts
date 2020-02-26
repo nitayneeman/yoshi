@@ -1,11 +1,16 @@
 import importFrom from 'import-from';
-import { isStylableDependencies } from './utils';
+import {
+  isStylableDependencies,
+  getYoshiStylableDependenciesDir,
+} from './utils';
 
 function getStylableWebpackPlugin() {
   if (isStylableDependencies()) {
     // @ts-ignore
-    return importFrom('@stylable/webpack-plugin', 'yoshi-stylable-dependencies')
-      .StylableWebpackPlugin;
+    return importFrom(
+      getYoshiStylableDependenciesDir(),
+      '@stylable/webpack-plugin',
+    ).StylableWebpackPlugin;
   }
 
   return require('@stylable/webpack-plugin');
