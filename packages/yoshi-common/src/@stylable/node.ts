@@ -16,15 +16,15 @@ function getStylableModuleFactory() {
   return require('@stylable/node').stylableModuleFactory;
 }
 
-function getStylableNamespaceFactory() {
+function getStylableResolveNamespaceFactory() {
   if (isStylableDependencies()) {
     // @ts-ignore
     return importFrom(getYoshiStylableDependenciesDir(), '@stylable/node')
-      .stylableModuleFactory;
+      .resolveNamespaceFactory;
   }
 
-  return require('@stylable/node').stylableModuleFactory;
+  return require('@stylable/node').resolveNamespaceFactory;
 }
 
 export const stylableModuleFactory = getStylableModuleFactory();
-export const resolveNamespaceFactory = getStylableNamespaceFactory();
+export const resolveNamespaceFactory = getStylableResolveNamespaceFactory();
