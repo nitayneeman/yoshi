@@ -6,6 +6,6 @@
     "jsx": "react",
   },
   "files": [
-    "./src/external-types.d.ts",
+    "./src/test-types.d.ts",
   ]
 }
